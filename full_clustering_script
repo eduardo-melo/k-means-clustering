@@ -1,0 +1,30 @@
+#!/bin/bash
+
+echo “Deleting existing files…”
+hadoop fs -rm -r /full_text
+hadoop fs -rm -r /out-seqdir
+hadoop fs -rm -r /out-seqdir-sparse
+hadoop fs -rm -r /out-kmeans
+hadoop fs -rm -r /out-kmeans-clusters
+
+hadoop fs -mkdir /full_text
+
+# Copying text documents to HDFS
+echo “Copying text documents to HDFS…”
+hadoop fs -copyFromLocal $1 /full_text/
+
+# Converting sequence files to HDFS
+echo “Converting sequence files to HDFS…”
+mahout seqdirectory -i hdfs://localhost:9000/full_text/ -o hdfs://localhost:9000/out-seqdir -c UTF-8 -chunk 5
+
+# Converting sequence files to sparse vectors
+echo “Converting sequence files to sparse vectors…”
+mahout seq2sparse -i hdfs://localhost:9000/out-seqdir -o hdfs://localhost:9000/out-seqdir-sparse --maxDFPercent 8 --namedVector
+
+# Running KMeans 
+echo “Running Means…”
+mahout kmeans -ow -i hdfs://localhost:9000/out-seqdir-sparse/tfidf-vectors/ -c hdfs://localhost:9000/out-kmeans-clusters -o hdfs://localhost:9000/out-kmeans -dm org.apache.mahout.common.distance.CosineDistanceMeasure -x 10 -k 5 -ow --clustering -cl
+
+# Running Cluster Dump (visualisation of clusters)
+echo “Running Cluster Dump…”
+mahout clusterdump -i hdfs://localhost:9000/out-kmeans/clusters-2-final -d hdfs://localhost:9000/out-seqdir-sparse/dictionary.file-0 -dt sequencefile -b 100 -n 20 --evaluate -dm org.apache.mahout.common.distance.CosineDistanceMeasure --pointsDir hdfs://localhost:9000/out-kmeans/clusteredPoints -o /Users/eduardomelo/out-output.txt
