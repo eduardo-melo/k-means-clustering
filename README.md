@@ -1,2 +1,2 @@
 # k-means-clustering
-Implementation of the k-means clustering algorithm
+K-means clustering algorithm on top of Mahout+Hadoop
